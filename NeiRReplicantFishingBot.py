@@ -5,8 +5,11 @@ import math
 import pynput
 from pynput.keyboard import Key
 import time
+import json
+import os
 from enum import Enum
 
+import Calibration
 
 
 class State(Enum):
@@ -30,115 +33,20 @@ class State(Enum):
     RECOVERY = 6
 
 
-gameResolution = np.array([2560, 1440])
-screenResolution = np.array([3840, 2160])
-baitNumber = 0
-numberOfAttempts = -1
+# Load configuration from config.json
+config_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.json")
 
+if not os.path.exists(config_path):
+    print("No config.json found. Running calibration...")
+    Calibration.run_calibration()
 
+with open(config_path, "r") as f:
+    config = json.load(f)
 
-
-
-def prompt_selection(message, options, default = None):
-    prompt = f"{message}"
-    if default is not None:
-        prompt += f" [default: {default}]"
-    prompt += ": "
-
-    while True:
-        print(prompt)
-        for i, option in enumerate(options, start=1):
-            print(f"{i}. {option}")
-        
-        choice = input("Enter the number of your choice: ").strip()
-
-        if choice == "":
-            if default is not None:
-                choice = str(default)
-            else:
-                print("Input is required.\n")
-                continue
-        
-        if choice.isdigit():
-            index = int(choice) - 1
-            if 0 <= index < len(options):
-                return options[index]
-        
-        print("Invalid input. Please enter a valid number.\n")
-        
-
-def prompt_integer(message, default=None, min_value=None, max_value=None):
-    prompt = f"{message}"
-    if default is not None:
-        prompt += f" [default: {default}]"
-    prompt += ": "
-
-    while True:
-        user_input = input(prompt).strip()
-
-        if user_input == "":
-            if default is not None:
-                return default
-            else:
-                print("Input is required.\n")
-                continue
-
-        try:
-            value = int(user_input)
-            if (min_value is not None and value < min_value) or \
-               (max_value is not None and value > max_value):
-                print(f"Please enter a number between {min_value} and {max_value}.\n")
-                continue
-            return value
-        except ValueError:
-            print("Invalid input. Please enter a valid integer.\n")
-
-
-def setup():
-    global screenResolution, gameResolution, baitNumber, numberOfAttempts
-
-    print("This program expect Neir Replicant to be run in Borderless Window mode.")
-
-    selection = prompt_selection("Please select an aspect ratio for both the screen and the game", ["16:9", "16:10", "21:9"], 1)
-
-    aspectRatio = 0
-    if selection == "16:9":
-        aspectRatio = 16 / 9.0
-    elif selection == "16:10":
-        aspectRatio = 16 / 10.0
-    elif selection == "21:9":
-        aspectRatio = 21 / 9.0
-
-    selection = prompt_selection("Please select a screen resolution", ["1080", "1440", "4k"])
-    
-    if selection == "1080":
-        screenResolution = np.array([aspectRatio * 1080, 1080])
-    elif selection == "1440":
-        screenResolution = np.array([aspectRatio * 1440, 1440])
-    elif selection == "4k":
-        screenResolution = np.array([aspectRatio * 2160, 2160])
-
-
-    selection = prompt_selection("Please select a game resolution", ["1080", "1440", "4k"])
-
-    if selection == "1080":
-        gameResolution = np.array([aspectRatio * 1080, 1080])
-    elif selection == "1440":
-        gameResolution = np.array([aspectRatio * 1440, 1440])
-    elif selection == "4k":
-        gameResolution = np.array([aspectRatio * 2160, 2160])
-    
-    baitNumber = prompt_integer("Please select how far down in the bait menu you want to go; 0 is the first bait ", 0)
-
-    numberOfAttempts = prompt_integer("Please select the number of attempts to do; -1 means don't stop", -1)
-
-    print("Press i to toggle bot activation.")
-    print("Press o to stop program.")
-    print("Attempt counter will reset each time the bot is started.")
-    print("Approach the water before starting.")
-    print()
-
-setup()
+gameResolution = np.array(config["game_resolution"])
+screenResolution = np.array(config["screen_resolution"])
+baitNumber = config["bait_number"]
+numberOfAttempts = config["number_of_attempts"]
 
 
 attemptCounter = 0
@@ -355,6 +263,9 @@ def recovery():
 
     state = State.CASTING
 
+print("Press i to toggle bot activation.")
+print("Press o to stop program.")
+
 while state != State.STOPPED:
     if state == State.DEBUG:
         state = State.CASTING
@@ -380,3 +291,4 @@ while state != State.STOPPED:
         print("Recovery")
         recovery()
         print()
+
