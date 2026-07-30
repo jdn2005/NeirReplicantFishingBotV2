@@ -77,7 +77,8 @@ def on_release(key):
 
 listener = pynput.keyboard.Listener(
     on_press=on_press,
-    on_release=on_release)
+    on_release=on_release,
+    suppress=False)
 listener.start()
 
 bounding_box = {'top': int(math.floor((screenResolution[1] - gameResolution[1]) / 2)), 'left': int(math.floor((screenResolution[0] - gameResolution[0]) / 2)) , 'width': int(gameResolution[0]), 'height': int(gameResolution[1])}
@@ -95,13 +96,16 @@ def capture_screen():
 
 def pressKey(key):
     keyboard.press(key)
-    time.sleep(0.05)
+    time.sleep(0.1)
     keyboard.release(key)
-    time.sleep(0.05)
+    time.sleep(0.1)
 
 
 
 #CIELAB
+#([5,155,102]) for desert 
+#([0, 170, 135]) for everywhere else
+
 bobberLowerBound = np.array([0, 170, 135])
 bobberUpperBound = np.array([255, 255, 255])
 
@@ -266,7 +270,11 @@ def recovery():
 print("Press i to toggle bot activation.")
 print("Press o to stop program.")
 
+TICK_RATE = 1.0 / 60.0
+
 while state != State.STOPPED:
+    tick_start = time.perf_counter()
+
     if state == State.DEBUG:
         state = State.CASTING
 
@@ -291,4 +299,9 @@ while state != State.STOPPED:
         print("Recovery")
         recovery()
         print()
+
+    elapsed = time.perf_counter() - tick_start
+    sleep_time = TICK_RATE - elapsed
+    if sleep_time > 0:
+        time.sleep(sleep_time)
 
